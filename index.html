@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aminah Harp – Data Science Portfolio</title>
+  <style>
+    :root{
+      --bg:#0b1020;--card:#121938;--muted:#9aa3b2;--txt:#f2f5ff;--acc:#68d391;--chip:#1c2549;--shadow:0 10px 30px rgba(0,0,0,.25)
+    }
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#0b1020,#0e1630 40%,#0b1020);color:var(--txt);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif}
+    a{color:var(--acc);text-decoration:none}a:hover{text-decoration:underline}
+    .wrap{max-width:1100px;margin:0 auto;padding:24px}
+    header{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 0}
+    .brand{font-weight:700;font-size:20px;letter-spacing:.5px}
+    .nav a{margin-left:16px;font-weight:600;color:var(--muted)}
+    .hero{margin:32px 0 18px;background:radial-gradient(1200px 400px at 20% -10%,#1b2555,transparent),radial-gradient(1000px 400px at 120% 0,#112053,transparent)}
+    .hero .card{background:var(--card);border:1px solid #213066;border-radius:18px;box-shadow:var(--shadow);padding:28px}
+    .title{font-size:34px;line-height:1.2;margin:0 0 8px}
+    .subtitle{color:var(--muted);margin:0 0 16px}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+    .chip{background:var(--chip);color:#cdd6f4;border:1px solid #233166;border-radius:999px;padding:6px 12px;font-size:13px}
+    .cta{display:flex;gap:12px;margin-top:12px}
+    .btn{display:inline-block;background:var(--acc);color:#0b1020;font-weight:700;padding:10px 14px;border-radius:12px}
+    .btn.alt{background:#0f1a3d;color:#cbd5e1;border:1px solid #233166}
+
+    h2{margin:32px 0 8px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+    .project{grid-column:span 12;background:var(--card);border:1px solid #213066;border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+    @media(min-width:800px){.project{grid-column:span 6}}
+    .project h3{margin:6px 0 6px}
+    .meta{color:var(--muted);font-size:14px;margin-bottom:8px}
+    .tags{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+    .tag{background:#0f1a3d;border:1px solid #233166;border-radius:999px;padding:4px 10px;font-size:12px;color:#b9c2d6}
+    .links{margin-top:10px;display:flex;flex-wrap:wrap;gap:10px}
+    footer{color:var(--muted);padding:24px 0;text-align:center}
+    code{background:#0f1a3d;border:1px solid #233166;padding:2px 6px;border-radius:6px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">Aminah Harp</div>
+      <nav class="nav">
+        <a href="#projects">Projects</a>
+        <a href="#about">About</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <div class="card">
+        <h1 class="title">Data Science & Analytics Portfolio</h1>
+        <p class="subtitle">R · Python · SQL · Power BI — I turn messy data into decisions.</p>
+        <div class="chips">
+          <span class="chip">Machine Learning</span>
+          <span class="chip">ETL & SQL</span>
+          <span class="chip">Data Visualization</span>
+          <span class="chip">Power BI</span>
+          <span class="chip">Snowflake</span>
+          <span class="chip">Databricks</span>
+        </div>
+        <div class="cta">
+          <a class="btn" href="#projects">See Projects</a>
+          <a class="btn alt" href="resume.pdf">Download Résumé</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="projects">
+      <h2>Featured Projects</h2>
+      <div class="grid">
+        <article class="project">
+          <h3>Procurement Spend Dashboard (Power BI)</h3>
+          <div class="meta">Interactive dashboard summarizing spend, vendors, and savings opportunities.</div>
+          <div class="tags">
+            <span class="tag">Power BI</span><span class="tag">DAX</span><span class="tag">Data Modeling</span>
+          </div>
+          <p>Modelled transactions, built star schema, and created KPI cards (YoY spend, vendor concentration, savings pipeline). Includes a write‑up of DAX measures and design choices.</p>
+          <div class="links">
+            <a href="projects/powerbi/README.md">Case Study</a>
+            <a href="projects/powerbi/report.pdf">Slides/PDF</a>
+            <a href="projects/powerbi/sample.pbix">.pbix</a>
+          </div>
+        </article>
+
+        <article class="project">
+          <h3>Time‑Series Forecasting (R)</h3>
+          <div class="meta">Forecast daily demand and evaluate models (ARIMA/ETS/Prophet).</div>
+          <div class="tags">
+            <span class="tag">R</span><span class="tag">tidyverse</span><span class="tag">forecast</span>
+          </div>
+          <p>Cleaned & visualized a public dataset, fit baseline and tuned models, and shipped an <code>.html</code> report with diagnostics and error metrics.</p>
+          <div class="links">
+            <a href="projects/r/forecasting.Rmd">RMarkdown</a>
+            <a href="projects/r/forecasting.html">Rendered Report</a>
+            <a href="projects/r/README.md">Project Notes</a>
+          </div>
+        </article>
+
+        <article class="project">
+          <h3>Churn Prediction (Python)</h3>
+          <div class="meta">End‑to‑end classification with feature engineering and model comparison.</div>
+          <div class="tags">
+            <span class="tag">Python</span><span class="tag">pandas</span><span class="tag">scikit‑learn</span>
+          </div>
+          <p>Notebook includes EDA, pipelines, cross‑validation, and a small FastAPI scoring demo (optional). Exported metrics + confusion matrix as assets.</p>
+          <div class="links">
+            <a href="projects/python/churn.ipynb">Notebook</a>
+            <a href="projects/python/README.md">Case Study</a>
+            <a href="projects/python/metrics.png">Metrics</a>
+          </div>
+        </article>
+
+        <article class="project">
+          <h3>SQL Analytics on a Sample Warehouse</h3>
+          <div class="meta">Window functions, cohort retention, and KPI queries on a sample DB.</div>
+          <div class="tags">
+            <span class="tag">SQL</span><span class="tag">CTEs</span><span class="tag">Window Functions</span>
+          </div>
+          <p>Includes schema diagram, seed data, and a <code>queries.sql</code> file with documented solutions and query plans.</p>
+          <div class="links">
+            <a href="projects/sql/README.md">Overview</a>
+            <a href="projects/sql/queries.sql">queries.sql</a>
+            <a href="projects/sql/schema.png">ERD</a>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="about">
+      <h2>About</h2>
+      <p>I'm a data scientist focused on analytics engineering, forecasting, and decision support. I work across R, Python, SQL, and Power BI to deliver clear insights. Currently finishing a B.S. in Statistics & Data Science and a 4+1 M.S. in Data Science.</p>
+    </section>
+
+    <section id="contact">
+      <h2>Contact</h2>
+      <p>Email: <a href="mailto:you@example.com">you@example.com</a> · GitHub: <a href="https://github.com/yourusername">@yourusername</a> · LinkedIn: <a href="https://www.linkedin.com/in/yourhandle/">/in/yourhandle</a></p>
+    </section>
+
+    <footer>
+      © <span id="year"></span> Aminah Harp. Built with GitHub Pages.
+    </footer>
+  </div>
+  <script>document.getElementById('year').textContent=new Date().getFullYear()</script>
+</body>
+</html>
