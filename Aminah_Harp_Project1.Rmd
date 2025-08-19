@@ -1,0 +1,470 @@
+---
+title: "Aminah_Harp_Project1"
+author: "Aminah Harp"
+date: "2024-04-15"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Part 1
+```{r}
+#Reading in file
+#install.packages("readxl")
+library(readxl)
+BabyShop <- read_excel("BabyShop.xlsx")
+```
+
+```{r}
+#1: Training and Testing Set
+set.seed(935)
+s <- sample(c(1:nrow(BabyShop)), .8*nrow(BabyShop))
+train <- BabyShop[s,]
+test <- BabyShop[-s,]
+```
+
+```{r}
+#2: Logistic Model
+log.train <- glm(PREGNANT ~ ., data = train, family = binomial)
+summary(log.train)
+#Insignificant Variables Testing: 
+train2 <- train[,-c(2,11)]
+test2 <- test[,-c(2,11)]
+log.train2 <- glm(PREGNANT ~ ., data = train2, family = binomial)
+summary(log.train2)
+```
+```{r}
+#2 cont'd:  Further Testing Insignificant variables
+library(car) 
+vif(log.train)
+train3 <- train[,-c(1,2,11)]
+test3 <- test[,-c(1,2,11)]
+log.train3 <-  glm(PREGNANT ~ ., data = train3, family = binomial)
+summary(log.train3)
+anova(log.train, log.train3, test="Chisq")
+#I decided to use vif and anova test to determine if I should remove Implied Gender, Home_Apt_Po_Box, and Sea Bands
+#VIF: The VIF values are low, so multicollinearity is not a problem.
+#ANOVA: The p value of 0.4721 >.05. This shows that removing the variables does not worsen the model, and there is no significant differences.
+#Conclusion: Since removing the variables does not hurt the model and makes all variables significant, I decided to make a model without the variables Implied Gender, Home_Apt_Po_Box, and Sea Bands. 
+```
+```{r}
+#3:ROC model and AUC
+library(pROC)
+test.PREGNANT <- factor(test3$PREGNANT, levels = c("1", "0"))  
+probs.test <- predict(log.train3, newdata = test3, type = "response")
+rocCurve <- roc(response = test.PREGNANT, predictor = probs.test)
+plot(rocCurve, legacy.axes = TRUE)
+auc(rocCurve)
+##The 0.8885 auc is good for predicting; 1 is the highest it can be, so 0.8885 means the model is very good at predicting but not perfect. (TPR close to 1, FPR Low)
+```
+
+```{r}
+#Bonus 1: ROC Curve
+#setting up vectors for loop
+thresh <- seq(from = 0, to = 1, by=.005) #I did 1/200=.005
+n <- length(thresh)
+sens <- numeric(n)
+spec <- numeric(n)
+
+#loop for sens and spec values
+for(i in 1:n){
+  pred.test_bonus <- ifelse(probs.test >= thresh[i], 1, 0)  
+  pred.test_bonus <- factor(pred.test_bonus, levels = c("1", "0"))
+  t <- table(pred.test_bonus, test.PREGNANT)
+  sens[i] <- t[1,1]/sum(t[1,1]+t[2,1])
+  spec[i] <- t[2,2]/sum(t[1,2]+t[2,2])
+  
+}
+
+## Roc Curve by hand:
+par(mfrow=c(1,1))
+plot(1-spec, sens, ylim=c(0,1), xlim=c(-.5,1.5), type="l")
+abline(a=0, b=1)
+```
+
+```{r}
+#Bonus 2: 
+#trapezoidal rule 
+-sum(diff(1-spec) * ((sens[-1] + sens[-length(sens)]) / 2)) 
+#0.8876065 is similar to 0.8885, but a little off since trapezoidal rule is more an an estimate. Also, I had to take the negative of the sum. Overall, the auc is close to 1 so it has good prediction power/ high TPR and low FPR. 
+```
+
+
+
+
+```{r}
+#4a: Simultaneous Sens, Spec, PPV, and NPV Crossplot
+
+library(caret)
+test.PREGNANT <- factor(test3$PREGNANT, levels = c("1", "0")) #had to set as factor, was not recognizing PREGNANT as one
+
+#vectors for loop
+thresholds <- rocCurve$thresholds
+ppv <- numeric(length(thresholds))
+npv <- numeric(length(thresholds))
+
+#loop to get ppv and npv values
+for (i in seq_along(thresholds)) {
+  t <- thresholds[i]
+  pred.test <- ifelse(probs.test > t, 1, 0)
+  pred.test <- factor(pred.test, levels = c("1", "0")) 
+  cm <- confusionMatrix(data = pred.test, reference = test.PREGNANT, positive = "1")
+  ppv[i] <- cm$byClass['Pos Pred Value']
+  npv[i] <- cm$byClass['Neg Pred Value']
+}
+
+#Plot with sens, spec, ppv, and npv
+plot(rev(thresholds), rocCurve$sensitivities, 
+     ylab = "Sens (open) / Spec (solid)", xlab = "Threshold")
+points(rev(thresholds), rocCurve$specificities, col = "blue", pch = 20)
+points(rev(thresholds), ppv, col = "red", pch = 20)  
+points(rev(thresholds), npv, col = "green", pch = 20)
+legend("bottomright", legend = c("Sensitivity", "Specificity", "PPV", "NPV"),col = c("black", "blue", "red", "green"), pch = c(1,20,20,20), cex = 0.5) #had to change pch for sensitivity on the legend so it looked open; also cex to make legend smaller because it covered graph too much
+```
+
+```{r}
+#4b: Plot estimation
+#using plot: specificity around .95 threshold for .9 spec
+
+#4c: finding actual with subset
+threshold_specific <- data.frame(threshold = rev(rocCurve$thresholds),sensitivity = rocCurve$sensitivities, specificity = rocCurve$specificities)
+print(subset(threshold_specific, specificity >= 0.9))
+#actual minimum threshold: 0.9859469
+```
+##Discussion: (in a paragraph no less than 5 sentences) (i) What threshold value did you choose and why? (ii) Overall, as the threshold values increase, how are the values of sensitivity, specificity, ppv, and npv changing? Does this seem to make sense, why?
+##I chose 0.9859469 because this is the minimum threshold value makes it at least 90% certain that non-pregnant people are not getting pregnancy ads. Also, this threshold value has the "happy medium" where sensitivity and specificity as well as positive predicitve value and negative predicitve value cross. As threshold values increase, sensitivity and ppv decrease while specificity and npv increase. The sensitivity and ppv decreasing makes sense because increasing the threshold makes the model more restrictive on what will be a positive(1/pregnant) classification. The specificity and npv increasing makes sense because increasing the threshold makes the model more likely to classify a value as negative(0/not pregnant) since it is restrictive with what can be posiitve. 
+
+```{r}
+#5a: Predict/Confusion Matrix
+pred.test2 <- ifelse(probs.test > 0.9859469, 1, 0)
+pred.test2 <- factor(pred.test2, levels = c("1", "0")) 
+c <- confusionMatrix(data=pred.test2, test.PREGNANT, positive = "1")
+c
+
+#5b: Values and Interpretations
+#Accuracy: The overall correctness of the model in predicting if people were pregnant(1) or not pregnant(0) was .587. 58.7% of the test set had the prediction of pregnant or not pregnant match the actual observation. 
+mean(pred.test2 == test3$PREGNANT)  #Accuracy=(21+87)/(21+87+1+75)
+
+#Sensitivity: 21.89% of those that were observed as being pregnant were predicted as being pregnant. The low sensitivity comes from the fact that the company wants to be certain they do not send pregnancy coupons to non pregnant people so less were classified as pregnant(1).
+c$byClass[[1]] #Sensitivity=21/(21+75)
+
+#Specificity: 98.86% of those that were observed as being not-pregnant were predicted as being not pregnant. The model was good at predicting non-pregnant observations due to the higher threshold which leads to high specificity.
+c$byClass[[2]] # Specificity=87/(87+1)
+
+#Positive Predictive Value: 95.45% of those predicted to be pregnant were actually observed as being pregnant. This high value shows that the company achieved their goal of having high certainty that who they predict to be pregnant and send coupons to is actually pregnant. 
+c$byClass[[3]] #PPV=21/(21+1)
+
+#Negative predictive value: 53.70 % of those predicted to be not-pregnant were actually observed as being not-pregnant. This lower percentage makes sense because the company was trying to be cautious/certain so some observed pregnant people were predicted to be not pregnant. 
+c$byClass[[4]] #NPV=87/(87+75)
+```
+##Part 2
+```{r}
+#1a: k=10 values
+library(caret)
+#Removing the insignificant variables from part 1
+BabyShop2 <- BabyShop[, -c(1, 2, 11)]
+BabyShop2$PREGNANT <- factor(BabyShop2$PREGNANT, levels = c(0, 1), labels = c("NonPregnant", "Pregnant")) #doing this in case it does not recognize as factor again
+
+#myControl: from DataCamp lesson
+myControl <- trainControl(
+  method = "cv",
+  number = 10,
+  summaryFunction = twoClassSummary,
+  classProbs = TRUE,
+  savePredictions = "final",  
+  verboseIter = TRUE
+)
+
+#Train() with full data set/cross validation
+cv.model <- train(PREGNANT ~ ., data = BabyShop2, method = "glm", family = binomial(), trControl = myControl)
+#predictions and threshold
+predictions <- cv.model$pred
+threshold <- 0.9859469
+
+#Converting probabilities to binary predictions
+predictions$pred_class <- ifelse(predictions$Pregnant > threshold, "Pregnant", "NonPregnant")
+predictions$pred_class <- factor(predictions$pred_class, levels = c("NonPregnant", "Pregnant"))
+
+#function to get metrics and confusion matrix for each fold
+results <- with(predictions, tapply(seq_along(Pregnant), Resample, function(idx) {
+  data <- predictions[idx, ]
+  cm <- confusionMatrix(data = factor(data$pred_class, levels = c("NonPregnant", "Pregnant")), reference = factor(data$obs, levels = c("NonPregnant", "Pregnant")), positive = "Pregnant")
+c(Accuracy = cm$overall['Accuracy'], 
+    Sensitivity = cm$byClass['Sensitivity'], 
+    Specificity = cm$byClass['Specificity'], 
+    PPV = cm$byClass['Pos Pred Value'], 
+    NPV = cm$byClass['Neg Pred Value'])
+}))
+
+#Turning into data frame for part 1b
+library(dplyr)
+results_df <- bind_rows(results, .id = "Fold")
+print(results_df)
+```
+```{r}
+#1b
+#Setting columns up as vectors
+accuracy <- results_df$Accuracy.Accuracy
+sensitivity <- results_df$Sensitivity.Sensitivity
+specificity <- results_df$Specificity.Specificity
+ppv <- results_df$`PPV.Pos Pred Value`
+npv <- results_df$`NPV.Neg Pred Value`
+
+#simultaneous box plots
+boxplot(accuracy, sensitivity, specificity, ppv, npv,
+        names = c("Accuracy","Sensitivity", "Specificity", "PPV", "NPV"),
+        cex.axis = 0.4,
+        main = "Metrics")
+
+```
+
+```{r}
+#1c:Summary Measures
+#applying summary measures to all columns of dataframe
+summary_stats <- sapply(results_df, function(x) {
+  c(Mean = mean(x, na.rm = TRUE),
+    Median = median(x, na.rm = TRUE),
+    SD = sd(x, na.rm = TRUE),
+    Min = min(x, na.rm = TRUE),
+    Max = max(x, na.rm = TRUE))
+})
+
+summary_stats <- as.data.frame(t(summary_stats))
+summary_stats
+```
+##Discussion: (in a paragraph 3-5 sentences) From (b) and (c), comment on the predictive performance of the model in reference to each: accuracy, sensitivity, specif icity,ppv, and npv
+##The values are similar to those found in part one, so the threshold performed well on the full dataset in accordance with prediction of pregnant vs non pregnant. The accuracy boxplot is distributred around a median of .6, sensitivity is once again low and distributed around .2, specificity is high and very close to one, ppv is also high with the distribution staying around .9-1, and npv is centered around .55 in the distribiution. The sensitivity is low due to the high threshold, while specificity is high since more values will be classified as not pregnant. PPV is high, which means that given someone of predicted pregant there is a high chance they actually are and will be sent the right coupons. 
+
+```{r}
+#2a: value: 0.9851035(below)
+#a
+library(caret)
+#Removing the insignificant variables from part 1
+BabyShop2 <- BabyShop[, -c(1, 2, 11)]
+BabyShop2$PREGNANT <- factor(BabyShop2$PREGNANT, levels = c(0, 1), labels = c("NonPregnant", "Pregnant"))
+
+#myControl: from DataCamp lesson
+myControl <- trainControl(
+  method = "cv",
+  number = 10,
+  summaryFunction = twoClassSummary,
+  classProbs = TRUE,
+  savePredictions = "final",  
+  verboseIter = TRUE
+)
+
+#Train() with full data set/cross validation
+cv.model <- train(PREGNANT ~ ., data = BabyShop2, method = "glm", family = binomial(), trControl = myControl)
+
+#predictions and threshold
+predictions <- cv.model$pred
+threshold <- 0.9851035
+
+#Converting probabilities to binary predictions
+predictions$pred_class <- ifelse(predictions$Pregnant > threshold, "Pregnant", "NonPregnant")
+predictions$pred_class <- factor(predictions$pred_class, levels = c("NonPregnant", "Pregnant"))
+
+#function to get metrics and confusion matrix for each fold
+results <- with(predictions, tapply(seq_along(Pregnant), Resample, function(idx) {
+  data <- predictions[idx, ]
+  cm <- confusionMatrix(data = factor(data$pred_class, levels = c("NonPregnant", "Pregnant")), 
+                        reference = factor(data$obs, levels = c("NonPregnant", "Pregnant")), 
+                        positive = "Pregnant")
+  c(Accuracy = cm$overall['Accuracy'], 
+    Sensitivity = cm$byClass['Sensitivity'], 
+    Specificity = cm$byClass['Specificity'], 
+    PPV = cm$byClass['Pos Pred Value'], 
+    NPV = cm$byClass['Neg Pred Value'])
+}))
+
+#Turning into data frame for part 1b
+library(dplyr)
+results_df <- bind_rows(results, .id = "Fold")
+print(results_df)
+
+#b
+#Setting columns up as vectors
+accuracy <- results_df$Accuracy.Accuracy
+sensitivity <- results_df$Sensitivity.Sensitivity
+specificity <- results_df$Specificity.Specificity
+ppv <- results_df$`PPV.Pos Pred Value`
+npv <- results_df$`NPV.Neg Pred Value`
+
+#simultaneous box plots
+boxplot(accuracy, sensitivity, specificity, ppv, npv,
+        names = c("Accuracy","Sensitivity", "Specificity", "PPV", "NPV"),
+        cex.axis = 0.4,
+        main = "Metrics")
+
+#c
+#applying summary measures to all columns of dataframe
+summary_stats <- sapply(results_df, function(x) {
+  c(Mean = mean(x, na.rm = TRUE),
+    Median = median(x, na.rm = TRUE),
+    SD = sd(x, na.rm = TRUE),
+    Min = min(x, na.rm = TRUE),
+    Max = max(x, na.rm = TRUE))
+})
+
+summary_stats <- as.data.frame(t(summary_stats))
+summary_stats
+```
+
+```{r}
+#2a: value:0.9877573
+#a
+library(caret)
+#Removing the insignificant variables from part 1
+BabyShop2 <- BabyShop[, -c(1, 2, 11)]
+BabyShop2$PREGNANT <- factor(BabyShop2$PREGNANT, levels = c(0, 1), labels = c("NonPregnant", "Pregnant"))
+
+#myControl: from DataCamp lesson
+myControl <- trainControl(
+  method = "cv",
+  number = 10,
+  summaryFunction = twoClassSummary,
+  classProbs = TRUE,
+  savePredictions = "final",  # Ensure predictions are saved
+  verboseIter = TRUE
+)
+
+#Train() with full data set/cross validation
+cv.model <- train(PREGNANT ~ ., data = BabyShop2, method = "glm", family = binomial(), trControl = myControl)
+
+#predictions and threshold
+predictions <- cv.model$pred
+threshold <- 0.9877573
+
+#Converting probabilities to binary predictions
+predictions$pred_class <- ifelse(predictions$Pregnant > threshold, "Pregnant", "NonPregnant")
+predictions$pred_class <- factor(predictions$pred_class, levels = c("NonPregnant", "Pregnant"))
+
+#function to get metrics and confusion matrix for each fold
+results <- with(predictions, tapply(seq_along(Pregnant), Resample, function(idx) {
+  data <- predictions[idx, ]
+  cm <- confusionMatrix(data = factor(data$pred_class, levels = c("NonPregnant", "Pregnant")), 
+                        reference = factor(data$obs, levels = c("NonPregnant", "Pregnant")), 
+                        positive = "Pregnant")
+  c(Accuracy = cm$overall['Accuracy'], 
+    Sensitivity = cm$byClass['Sensitivity'], 
+    Specificity = cm$byClass['Specificity'], 
+    PPV = cm$byClass['Pos Pred Value'], 
+    NPV = cm$byClass['Neg Pred Value'])
+}))
+
+#Turning into data frame for part 1b
+library(dplyr)
+results_df <- bind_rows(results, .id = "Fold")
+print(results_df)
+
+#b
+#Setting columns up as vectors
+accuracy <- results_df$Accuracy.Accuracy
+sensitivity <- results_df$Sensitivity.Sensitivity
+specificity <- results_df$Specificity.Specificity
+ppv <- results_df$`PPV.Pos Pred Value`
+npv <- results_df$`NPV.Neg Pred Value`
+
+#simultaneous box plots
+boxplot(accuracy, sensitivity, specificity, ppv, npv,
+        names = c("Accuracy","Sensitivity", "Specificity", "PPV", "NPV"),
+        cex.axis = 0.4,
+        main = "Metrics")
+
+#c
+#applying summary measures to all columns of dataframe
+summary_stats <- sapply(results_df, function(x) {
+  c(Mean = mean(x, na.rm = TRUE),
+    Median = median(x, na.rm = TRUE),
+    SD = sd(x, na.rm = TRUE),
+    Min = min(x, na.rm = TRUE),
+    Max = max(x, na.rm = TRUE))
+})
+
+summary_stats <- as.data.frame(t(summary_stats))
+summary_stats
+```
+
+```{r}
+#2a:0.9884539 (above)
+#a
+library(caret)
+#Removing the insignificant variables from part 1
+BabyShop2 <- BabyShop[, -c(1, 2, 11)] 
+BabyShop2$PREGNANT <- factor(BabyShop2$PREGNANT, levels = c(0, 1), labels = c("NonPregnant", "Pregnant"))
+
+#my Control: from Data Camp lesson
+myControl <- trainControl(
+  method = "cv",
+  number = 10,
+  summaryFunction = twoClassSummary,
+  classProbs = TRUE,
+  savePredictions = "final",  # Ensure predictions are saved
+  verboseIter = TRUE
+)
+
+#Train() with full data set/cross validation
+cv.model <- train(PREGNANT ~ ., data = BabyShop2, method = "glm", family = binomial(), trControl = myControl)
+
+#predictions and threshold
+predictions <- cv.model$pred
+threshold <- 0.9884539
+
+#Converting probabilities to binary predictions
+predictions$pred_class <- ifelse(predictions$Pregnant > threshold, "Pregnant", "NonPregnant")
+predictions$pred_class <- factor(predictions$pred_class, levels = c("NonPregnant", "Pregnant"))
+
+#function to get metrics and confusion matrix for each fold
+results <- with(predictions, tapply(seq_along(Pregnant), Resample, function(idx) {
+  data <- predictions[idx, ]
+  cm <- confusionMatrix(data = factor(data$pred_class, levels = c("NonPregnant", "Pregnant")), 
+                        reference = factor(data$obs, levels = c("NonPregnant", "Pregnant")), 
+                        positive = "Pregnant")
+  c(Accuracy = cm$overall['Accuracy'], 
+    Sensitivity = cm$byClass['Sensitivity'], 
+    Specificity = cm$byClass['Specificity'], 
+    PPV = cm$byClass['Pos Pred Value'], 
+    NPV = cm$byClass['Neg Pred Value'])
+}))
+
+#Turning into data frame for part 1b
+library(dplyr)
+results_df <- bind_rows(results, .id = "Fold")
+print(results_df)
+
+#b
+#Setting columns up as vectors
+accuracy <- results_df$Accuracy.Accuracy
+sensitivity <- results_df$Sensitivity.Sensitivity
+specificity <- results_df$Specificity.Specificity
+ppv <- results_df$`PPV.Pos Pred Value`
+npv <- results_df$`NPV.Neg Pred Value`
+
+#simultaneous box plots
+boxplot(accuracy, sensitivity, specificity, ppv, npv,
+        names = c("Accuracy","Sensitivity", "Specificity", "PPV", "NPV"),
+        cex.axis = 0.4,
+        main = "Metrics")
+
+#c
+#applying summary measures to all columns of dataframe
+summary_stats <- sapply(results_df, function(x) {
+  c(Mean = mean(x, na.rm = TRUE),
+    Median = median(x, na.rm = TRUE),
+    SD = sd(x, na.rm = TRUE),
+    Min = min(x, na.rm = TRUE),
+    Max = max(x, na.rm = TRUE))
+})
+
+summary_stats <- as.data.frame(t(summary_stats))
+summary_stats
+```
+```{r}
+#2b: threshold choice = 0.9859469
+```
+
+##Discussion: (in a paragraph 3-5 sentences) Using what the plots and numbers show,comment on why you are recommending the threshold value you chose.
+##I chose 0.9859469 because it has the highest mean specificity and mean ppv while also being the lowest to achieve the miminum specificity required in part 1. Also, the lower sensitivity matches the information in part 1. Finally, the boxplot distributions for ppv and specificity stay close to the top so there is not a large amount of variation. Accuracy and npv also have distributions that do not vary widely. Other thresholds have higher accuracy, but this is not necesarily important as the company is trying to be certain when classyfying pregnant people correctly. 
+##
